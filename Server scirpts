@@ -7,14 +7,33 @@ local function getGamepasses()
 	local passes = {}
 	local cursor = ""
 
-	repeat
-		local url = "https://games.roproxy.com/v1/games/" .. game.GameId .. "/game-passes?limit=100&sortOrder=Asc&cursor=" .. cursor
-		local ok, res = pcall(function()
+None = pcall(function()
 			return HttpService:GetAsync(url)
 		end)
-		if not ok then break end
 
-		local data = HttpService:JSONDecode(res)
+		if not ok then
+			warn("HTTP request failed:", res)
+			break
+		end
+
+		print("Raw response:", res)
+
+		local decodeOk, data = pcall(function()
+			return HttpService:JSONDecode(res)
+		end)
+
+		if not decodeOk then
+			warn("JSON decode failed:", data)
+			break
+		end
+
+		if not data.data then
+			warn("No data field in response:", res)
+			break
+		end
+
+		print("Gamepasses found on this page:", #data.data)
+
 		for _, pass in ipairs(data.data) do
 			table.insert(passes, { id = pass.id, name = pass.name })
 		end
@@ -29,11 +48,16 @@ local function getOwnedGamepasses(player)
 	local owned = {}
 	local passes = getGamepasses()
 
+	print("Total gamepasses fetched:", #passes)
+
 	for _, pass in ipairs(passes) do
 		local owns = false
-		pcall(function()
+		local ok, err = pcall(function()
 			owns = MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.id)
 		end)
+		if not ok then
+			warn("UserOwnsGamePassAsync failed for", pass.name, ":", err)
+		end
 		if owns then
 			owned[pass.name] = true
 		end
@@ -44,6 +68,7 @@ end
 
 remote.OnServerInvoke = function(player)
 	local owned = getOwnedGamepasses(player)
+	print("Owned gamepasses for", player.Name)
 	for name, value in pairs(owned) do
 		print(name .. ": " .. tostring(value))
 	end
