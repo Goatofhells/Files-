@@ -6,11 +6,11 @@ local remote = game:GetService("ReplicatedStorage"):WaitForChild("Assets"):WaitF
 
 local function getGamepasses()
 	local passes = {}
-	local cursor = ""
+	local pageToken = ""
 	local connection
 
 	connection = RunService.Heartbeat:Connect(function()
-		local url = "https://games.roproxy.com/v1/games/" .. game.GameId .. "/game-passes?limit=100&sortOrder=Asc&cursor=" .. cursor
+		local url = "https://apis.roproxy.com/game-passes/v1/universes/" .. game.GameId .. "/game-passes?passView=Full&pageSize=100&pageToken=" .. pageToken
 		print("Fetching:", url)
 
 		local ok, res = pcall(HttpService.GetAsync, HttpService, url)
@@ -29,7 +29,7 @@ local function getGamepasses()
 			return
 		end
 
-		if not data.data then
+		if not data.gamePasses then
 			warn("No data field in response:", res)
 			connection:Disconnect()
 			return
@@ -37,13 +37,13 @@ local function getGamepasses()
 
 		print("Gamepasses found on this page:", #data.data)
 
-		for _, pass in ipairs(data.data) do
+		for _, pass in ipairs(data.gamePasses) do
 			table.insert(passes, { id = pass.id, name = pass.name })
 		end
 
-		cursor = data.nextPageCursor or ""
+		pageToken = data.nextPageToken or ""
 
-		if cursor == "" then
+		if pageToken == "" then
 			connection:Disconnect()
 		end
 	end)
