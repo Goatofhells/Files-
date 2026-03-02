@@ -1,1 +1,4 @@
 
+local remote = game:GetService("ReplicatedStorage"):WaitForChild("Assets"):WaitForChild("Remotes"):WaitForChild("RequestOwnedGamepasses")
+
+remote:InvokeServer()
