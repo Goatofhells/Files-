@@ -1,35 +1,38 @@
 local MarketplaceService = game:GetService("MarketplaceService")
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 
 local remote = game:GetService("ReplicatedStorage"):WaitForChild("Assets"):WaitForChild("Remotes"):WaitForChild("RequestOwnedGamepasses")
 
 local function getGamepasses()
 	local passes = {}
 	local cursor = ""
+	local connection
 
-None = pcall(function()
-			return HttpService:GetAsync(url)
-		end)
+	connection = RunService.Heartbeat:Connect(function()
+		local url = "https://games.roproxy.com/v1/games/" .. game.GameId .. "/game-passes?limit=100&sortOrder=Asc&cursor=" .. cursor
+		print("Fetching:", url)
 
+		local ok, res = pcall(HttpService.GetAsync, HttpService, url)
 		if not ok then
 			warn("HTTP request failed:", res)
-			break
+			connection:Disconnect()
+			return
 		end
 
 		print("Raw response:", res)
 
-		local decodeOk, data = pcall(function()
-			return HttpService:JSONDecode(res)
-		end)
-
+		local decodeOk, data = pcall(HttpService.JSONDecode, HttpService, res)
 		if not decodeOk then
 			warn("JSON decode failed:", data)
-			break
+			connection:Disconnect()
+			return
 		end
 
 		if not data.data then
 			warn("No data field in response:", res)
-			break
+			connection:Disconnect()
+			return
 		end
 
 		print("Gamepasses found on this page:", #data.data)
@@ -39,7 +42,11 @@ None = pcall(function()
 		end
 
 		cursor = data.nextPageCursor or ""
-	until cursor == ""
+
+		if cursor == "" then
+			connection:Disconnect()
+		end
+	end)
 
 	return passes
 end
