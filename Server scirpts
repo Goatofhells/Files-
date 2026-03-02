@@ -1,0 +1,35 @@
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+
+local remote = game:GetService("ReplicatedStorage"):WaitForChild("Assets"):WaitForChild("Remotes"):WaitForChild("RequestOwnedGamepasses")
+
+local function getOwnedGamepasses(player)
+	local owned = {}
+	local page = MarketplaceService:GetGamePassProductInfo(game.GameId)
+	
+	local success, gamepasses = pcall(function()
+		return MarketplaceService:GetGamePassProductInfoAsync(game.GameId)
+	end)
+	
+	if not success then return owned end
+
+	for _, pass in ipairs(gamepasses) do
+		local owns = false
+		local ok = pcall(function()
+			owns = MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.AssetId)
+		end)
+		if ok and owns then
+			owned[pass.Name] = true
+		end
+	end
+
+	return owned
+end
+
+remote.OnServerInvoke = function(player)
+	local owned = getOwnedGamepasses(player)
+	
+	for name, value in pairs(owned) do
+		print(name .. ": " .. tostring(value))
+	end
+end
